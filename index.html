@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>StockCount — Inventory</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap');
+
+  [data-theme="dark"] {
+    --bg:        #0f1117;
+    --surface:   #181c27;
+    --card:      #1e2333;
+    --header-bg: #12172b;
+    --border:    #2a3045;
+    --text:      #e8eaf2;
+    --muted:     #6b7594;
+    --detail-bg: #141928;
+    --shadow:    rgba(0,0,0,0.4);
+    --chip-bg:   #232a3d;
+  }
+  [data-theme="light"] {
+    --bg:        #f0f2f8;
+    --surface:   #ffffff;
+    --card:      #ffffff;
+    --header-bg: #ffffff;
+    --border:    #d4d9e8;
+    --text:      #1a1f35;
+    --muted:     #7a84a0;
+    --detail-bg: #f7f8fc;
+    --shadow:    rgba(0,0,0,0.1);
+    --chip-bg:   #eef0f7;
+  }
+
+  :root {
+    --accent:  #3b82f6;
+    --accent2: #6366f1;
+    --green:   #22c55e;
+    --red:     #ef4444;
+    --yellow:  #f59e0b;
+    --mono:    'DM Mono', monospace;
+    --sans:    'Syne', sans-serif;
+    --radius:  12px;
+    --radius-sm: 6px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+    transition: background 0.25s, color 0.25s;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--header-bg);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 14px 10px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px var(--shadow);
+    transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
+  }
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    gap: 8px;
+  }
+  .logo {
+    font-family: var(--sans);
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    flex-shrink: 0;
+  }
+  .logo span { font-weight: 700; opacity: 0.5; }
+  .header-actions { display: flex; gap: 8px; align-items: center; }
+
+  /* THEME TOGGLE */
+  .theme-toggle {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    width: 58px; height: 30px;
+    cursor: pointer;
+    position: relative;
+    flex-shrink: 0;
+    transition: background 0.25s, border-color 0.25s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .theme-toggle::before {
+    content: '';
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  [data-theme="light"] .theme-toggle::before { transform: translateX(27px); }
+  .t-icon {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    font-size: 12px; pointer-events: none; transition: opacity 0.2s; line-height: 1;
+  }
+  .t-moon { left: 6px; }
+  .t-sun  { right: 5px; }
+  [data-theme="light"] .t-moon { opacity: 0.25; }
+  [data-theme="dark"]  .t-sun  { opacity: 0.25; }
+
+  .btn-clear {
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.3);
+    color: var(--red);
+    border-radius: var(--radius-sm);
+    padding: 7px 12px;
+    font-family: var(--mono);
+    font-size: 12px; font-weight: 500;
+    cursor: pointer; letter-spacing: 0.5px;
+    transition: background 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    white-space: nowrap;
+  }
+  .btn-clear:active { background: rgba(239,68,68,0.25); }
+
+  /* FORM */
+  .form-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+    margin-bottom: 10px;
+    transition: background 0.25s, border-color 0.25s;
+  }
+  .form-label {
+    font-size: 10px; font-weight: 500; letter-spacing: 1.2px;
+    color: var(--muted); text-transform: uppercase;
+    display: block; margin-bottom: 5px;
+  }
+  .form-row {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 8px; margin-bottom: 8px;
+  }
+  .field { display: flex; flex-direction: column; }
+
+  input[type="text"],
+  input[type="number"],
+  .inline-input {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 16px;
+    padding: 10px 12px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.25s, color 0.25s;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  input[type="text"]:focus,
+  input[type="number"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+  }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+  input[type="number"] { -moz-appearance: textfield; }
+
+  .code-input { font-size: 18px; letter-spacing: 1.5px; font-weight: 500; }
+  .code-input.has-value { border-color: var(--accent); }
+
+  .section-divider {
+    display: flex; align-items: center; gap: 8px; margin: 10px 0 8px;
+  }
+  .section-divider span {
+    font-size: 10px; letter-spacing: 1.2px; color: var(--muted);
+    text-transform: uppercase; white-space: nowrap;
+  }
+  .section-divider::before, .section-divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+    transition: background 0.25s;
+  }
+
+  .btn-add {
+    width: 100%; padding: 13px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none; border-radius: var(--radius); color: #fff;
+    font-family: var(--sans); font-size: 16px; font-weight: 700;
+    letter-spacing: 0.5px; cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    -webkit-tap-highlight-color: transparent; margin-top: 4px;
+  }
+  .btn-add:active { opacity: 0.85; transform: scale(0.985); }
+
+  /* STATS */
+  .stats-bar { display: flex; gap: 8px; margin-bottom: 10px; }
+  .stat-pill {
+    flex: 1; background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 8px 10px; text-align: center;
+    transition: background 0.25s, border-color 0.25s;
+  }
+  .stat-pill .val {
+    font-family: var(--sans); font-size: 20px; font-weight: 800;
+    display: block; line-height: 1;
+  }
+  .stat-pill .lbl {
+    font-size: 9px; letter-spacing: 1px; color: var(--muted);
+    text-transform: uppercase; display: block; margin-top: 3px;
+  }
+  .stat-pill.all .val { color: var(--accent); }
+  .stat-pill.ok  .val { color: var(--green); }
+  .stat-pill.bad .val { color: var(--red); }
+
+  /* MAIN */
+  .main { padding: 12px; padding-bottom: 32px; }
+
+  /* ── ITEM CARDS ── */
+  .item-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .item-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: background 0.25s, border-color 0.25s;
+  }
+  .item-card.expanded { border-color: var(--accent); }
+
+  /* Summary row */
+  .item-summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 12px;
+    min-height: 58px;
+  }
+
+  .summary-left {
+    flex: 1;
+    min-width: 0;
+  }
+  .summary-code {
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .summary-ts {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 2px;
+    display: block;
+  }
+
+  .summary-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  /* Total badge */
+  .total-badge {
+    font-family: var(--sans);
+    font-weight: 800;
+    font-size: 18px;
+    min-width: 52px;
+    text-align: center;
+    padding: 5px 10px;
+    border-radius: 8px;
+    line-height: 1.2;
+  }
+  .total-badge small {
+    display: block;
+    font-size: 9px;
+    font-family: var(--mono);
+    font-weight: 400;
+    letter-spacing: 1px;
+    opacity: 0.7;
+    text-transform: uppercase;
+    margin-top: 1px;
+  }
+  .total-badge.match    { color: var(--green);  background: rgba(34,197,94,0.12);  }
+  .total-badge.mismatch { color: var(--red);    background: rgba(239,68,68,0.12);  }
+  .total-badge.neutral  { color: var(--muted);  background: var(--chip-bg); }
+
+  /* Variance pill */
+  .var-pill {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .var-pill.match { color: var(--green);  background: rgba(34,197,94,0.12); }
+  .var-pill.over  { color: var(--yellow); background: rgba(245,158,11,0.12); }
+  .var-pill.under { color: var(--red);    background: rgba(239,68,68,0.12); }
+
+  /* Chevron button */
+  .btn-chevron {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 14px;
+    transition: background 0.15s, color 0.15s, transform 0.25s;
+    -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
+  }
+  .btn-chevron:active { background: var(--chip-bg); }
+  .item-card.expanded .btn-chevron {
+    color: var(--accent);
+    border-color: var(--accent);
+    transform: rotate(180deg);
+  }
+
+  /* Delete button */
+  .btn-delete {
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.2);
+    color: var(--red);
+    border-radius: 6px;
+    width: 32px; height: 32px;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.1s;
+    -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
+  }
+  .btn-delete:active { background: rgba(239,68,68,0.25); }
+
+  /* Detail panel */
+  .item-detail {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .item-card.expanded .item-detail {
+    max-height: 400px;
+  }
+
+  .detail-inner {
+    background: var(--detail-bg);
+    border-top: 1px solid var(--border);
+    padding: 12px;
+    transition: background 0.25s, border-color 0.25s;
+  }
+
+  .detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .detail-chip {
+    background: var(--chip-bg);
+    border-radius: 8px;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    transition: background 0.25s;
+  }
+  .detail-chip .chip-label {
+    font-size: 9px;
+    letter-spacing: 1.1px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .detail-chip .chip-val {
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* Inline edit inside chip */
+  .chip-edit-input {
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 16px;
+    font-weight: 500;
+    padding: 2px 6px;
+    width: 80px;
+    outline: none;
+    -webkit-appearance: none;
+    -moz-appearance: textfield;
+  }
+  .chip-edit-input::-webkit-inner-spin-button,
+  .chip-edit-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+  .edit-hint {
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    margin-top: 6px;
+    text-align: center;
+    opacity: 0.7;
+  }
+
+  /* Empty state */
+  .empty-state { text-align: center; padding: 48px 24px; }
+  .empty-state .icon { font-size: 42px; margin-bottom: 12px; display: block; opacity: 0.4; }
+  .empty-state h3 { font-family: var(--sans); font-size: 18px; color: var(--muted); margin-bottom: 6px; }
+  .empty-state p  { font-size: 12px; color: var(--muted); opacity: 0.6; }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 12px 20px; font-size: 13px;
+    color: var(--text); z-index: 999;
+    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), background 0.25s;
+    white-space: nowrap; box-shadow: 0 8px 32px var(--shadow);
+  }
+  .toast.show    { transform: translateX(-50%) translateY(0); }
+  .toast.success { border-left: 3px solid var(--green); }
+  .toast.error   { border-left: 3px solid var(--red); }
+  .toast.info    { border-left: 3px solid var(--accent); }
+
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .card-new { animation: cardIn 0.22s ease forwards; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div class="logo">Stock<span>Count</span></div>
+    <div class="header-actions">
+      <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+        <span class="t-icon t-moon">🌙</span>
+        <span class="t-icon t-sun">☀️</span>
+      </button>
+      <button class="btn-clear" id="btnClear">✕ Clear All</button>
+    </div>
+  </div>
+
+  <div class="form-card">
+    <div class="form-row">
+      <div class="field">
+        <label class="form-label" for="inCode">Product Code / SKU</label>
+        <input id="inCode" class="code-input" type="text"
+               placeholder="Any code or SKU" autocomplete="off"
+               autocorrect="off" autocapitalize="characters" spellcheck="false">
+      </div>
+      <div class="field">
+        <label class="form-label" for="inExpected">Expected Total</label>
+        <input id="inExpected" type="number" inputmode="numeric" placeholder="0" min="0">
+      </div>
+    </div>
+
+    <div class="section-divider"><span>Location Counts</span></div>
+
+    <div class="form-row">
+      <div class="field">
+        <label class="form-label" for="inFrontShelf">Front Shelf</label>
+        <input id="inFrontShelf" type="number" inputmode="numeric" placeholder="0" min="0">
+      </div>
+      <div class="field">
+        <label class="form-label" for="inOverflow">Overflow (Back)</label>
+        <input id="inOverflow" type="number" inputmode="numeric" placeholder="0" min="0">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="field">
+        <label class="form-label" for="inCases">Full Cases (units)</label>
+        <input id="inCases" type="number" inputmode="numeric" placeholder="0" min="0">
+      </div>
+      <div class="field">
+        <label class="form-label" for="inCooler">Cooler</label>
+        <input id="inCooler" type="number" inputmode="numeric" placeholder="0" min="0">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="field">
+        <label class="form-label" for="inRegister">Front Register</label>
+        <input id="inRegister" type="number" inputmode="numeric" placeholder="0" min="0">
+      </div>
+      <div class="field">
+        <label class="form-label" for="inEndcap">End Cap</label>
+        <input id="inEndcap" type="number" inputmode="numeric" placeholder="0" min="0">
+      </div>
+    </div>
+
+    <button class="btn-add" id="btnAdd">＋ Add / Update Item</button>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-pill all">
+      <span class="val" id="statTotal">0</span>
+      <span class="lbl">Items</span>
+    </div>
+    <div class="stat-pill ok">
+      <span class="val" id="statOk">0</span>
+      <span class="lbl">Match</span>
+    </div>
+    <div class="stat-pill bad">
+      <span class="val" id="statBad">0</span>
+      <span class="lbl">Variance</span>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="item-list" id="itemList"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORAGE_KEY = 'stockcount_v2';
+const THEME_KEY   = 'stockcount_theme';
+const LOCATIONS   = ['frontShelf','overflow','cases','cooler','register','endcap'];
+const LOC_LABELS  = {
+  frontShelf: 'Front Shelf',
+  overflow:   'Overflow',
+  cases:      'Full Cases',
+  cooler:     'Cooler',
+  register:   'Register',
+  endcap:     'End Cap'
+};
+
+let items    = [];
+let expanded = new Set(); // tracks which indices are open
+
+/* ── Persistence ── */
+function load() {
+  try { items = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { items = []; }
+}
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+}
+
+/* ── Theme ── */
+function loadTheme() {
+  document.documentElement.setAttribute('data-theme',
+    localStorage.getItem(THEME_KEY) || 'dark');
+}
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem(THEME_KEY, next);
+});
+
+/* ── Helpers ── */
+function getTotal(item) {
+  return LOCATIONS.reduce((s, k) => s + (parseInt(item[k]) || 0), 0);
+}
+
+function fmtTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso), m = Math.floor((Date.now() - d) / 60000);
+  const h = Math.floor(m / 60), dy = Math.floor(h / 24);
+  if (m < 1)  return 'just now';
+  if (m < 60) return `${m}m ago`;
+  if (h < 24) return `${h}h ago`;
+  if (dy < 7) return `${dy}d ago`;
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showToast(msg, type = 'info') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast ${type} show`;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 2400);
+}
+
+function clearInputs() {
+  ['inCode','inExpected','inFrontShelf','inOverflow','inCases','inCooler','inRegister','inEndcap']
+    .forEach(id => document.getElementById(id).value = '');
+  document.getElementById('inCode').className = 'code-input';
+}
+
+function readForm() {
+  return {
+    code:       document.getElementById('inCode').value.trim().toUpperCase(),
+    expected:   parseInt(document.getElementById('inExpected').value)   || 0,
+    frontShelf: parseInt(document.getElementById('inFrontShelf').value) || 0,
+    overflow:   parseInt(document.getElementById('inOverflow').value)   || 0,
+    cases:      parseInt(document.getElementById('inCases').value)      || 0,
+    cooler:     parseInt(document.getElementById('inCooler').value)     || 0,
+    register:   parseInt(document.getElementById('inRegister').value)   || 0,
+    endcap:     parseInt(document.getElementById('inEndcap').value)     || 0,
+  };
+}
+
+/* ── Render ── */
+function render() {
+  updateStats();
+  const list = document.getElementById('itemList');
+
+  if (items.length === 0) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <span class="icon">📦</span>
+        <h3>No items counted yet</h3>
+        <p>Enter any product code or SKU above to get started.</p>
+      </div>`;
+    return;
+  }
+
+  list.innerHTML = '';
+
+  items.forEach((item, idx) => {
+    const total   = getTotal(item);
+    const hasExp  = item.expected > 0;
+    const match   = hasExp && total === item.expected;
+    const over    = hasExp && total > item.expected;
+    const diff    = total - item.expected;
+
+    const badgeClass = !hasExp ? 'neutral' : match ? 'match' : 'mismatch';
+    const varClass   = match ? 'match' : over ? 'over' : 'under';
+    const varLabel   = match ? '✓ OK'  : over ? `+${diff}` : `${diff}`;
+    const ts         = item.updatedAt ? fmtTime(item.updatedAt) : '';
+    const isOpen     = expanded.has(idx);
+
+    // Only locations with count > 0
+    const activeLocations = LOCATIONS.filter(k => (parseInt(item[k]) || 0) > 0);
+
+    // Build detail chips
+    let chipsHtml = '';
+    if (activeLocations.length === 0) {
+      chipsHtml = `<p class="edit-hint" style="margin:0;text-align:left;opacity:0.5;">All location counts are 0.</p>`;
+    } else {
+      chipsHtml = `<div class="detail-grid">`;
+      activeLocations.forEach(k => {
+        chipsHtml += `
+          <div class="detail-chip">
+            <span class="chip-label">${LOC_LABELS[k]}</span>
+            <span class="chip-val">
+              <span class="cell-val" data-idx="${idx}" data-key="${k}">${item[k] || 0}</span>
+            </span>
+          </div>`;
+      });
+      chipsHtml += `</div>`;
+    }
+
+    // Expected chip row (always shown in detail if set)
+    let expectedRow = '';
+    if (hasExp) {
+      expectedRow = `
+        <div class="detail-chip" style="grid-column:1/-1;flex-direction:row;align-items:center;justify-content:space-between;">
+          <span class="chip-label" style="font-size:10px;">Expected</span>
+          <span class="chip-val" style="font-size:15px;">
+            <span class="cell-val" data-idx="${idx}" data-key="expected">${item.expected}</span>
+          </span>
+        </div>`;
+      // wrap in a single-col grid row
+      chipsHtml += `<div class="detail-grid" style="grid-template-columns:1fr;">${expectedRow}</div>`;
+    }
+
+    const card = document.createElement('div');
+    card.className = `item-card card-new${isOpen ? ' expanded' : ''}`;
+    card.id = `card-${idx}`;
+    card.innerHTML = `
+      <div class="item-summary">
+        <div class="summary-left">
+          <div class="summary-code">${esc(item.code)}</div>
+          ${ts ? `<span class="summary-ts">${ts}</span>` : ''}
+        </div>
+        <div class="summary-right">
+          <div class="total-badge ${badgeClass}">
+            ${total}
+            <small>counted</small>
+          </div>
+          ${hasExp ? `<span class="var-pill ${varClass}">${varLabel}</span>` : ''}
+          <button class="btn-chevron" data-idx="${idx}" title="Expand details">▾</button>
+          <button class="btn-delete" data-idx="${idx}" title="Delete">✕</button>
+        </div>
+      </div>
+      <div class="item-detail">
+        <div class="detail-inner">
+          ${chipsHtml}
+          <p class="edit-hint">Tap any value to edit it</p>
+        </div>
+      </div>`;
+
+    list.appendChild(card);
+  });
+
+  // Bind events
+  list.querySelectorAll('.btn-chevron').forEach(btn => btn.addEventListener('click', toggleExpand));
+  list.querySelectorAll('.btn-delete').forEach(btn => btn.addEventListener('click', deleteItem));
+  list.querySelectorAll('.cell-val').forEach(el => el.addEventListener('click', startEdit));
+}
+
+function updateStats() {
+  let ok = 0, bad = 0;
+  items.forEach(item => {
+    if (!item.expected) return;
+    getTotal(item) === item.expected ? ok++ : bad++;
+  });
+  document.getElementById('statTotal').textContent = items.length;
+  document.getElementById('statOk').textContent    = ok;
+  document.getElementById('statBad').textContent   = bad;
+}
+
+/* ── Toggle expand ── */
+function toggleExpand(e) {
+  const idx  = parseInt(e.currentTarget.dataset.idx);
+  const card = document.getElementById(`card-${idx}`);
+  if (expanded.has(idx)) {
+    expanded.delete(idx);
+    card.classList.remove('expanded');
+  } else {
+    expanded.add(idx);
+    card.classList.add('expanded');
+  }
+}
+
+/* ── Inline edit (inside detail chips) ── */
+function startEdit(e) {
+  const span = e.currentTarget;
+  const idx  = parseInt(span.dataset.idx);
+  const key  = span.dataset.key;
+
+  const inp = document.createElement('input');
+  inp.type      = 'number';
+  inp.inputMode = 'numeric';
+  inp.className = 'chip-edit-input';
+  inp.value     = items[idx][key] || 0;
+  inp.min       = '0';
+  span.replaceWith(inp);
+  inp.focus(); inp.select();
+
+  function commit() {
+    items[idx][key]      = parseInt(inp.value) || 0;
+    items[idx].updatedAt = new Date().toISOString();
+    save(); render();
+    // Re-open the card after render
+    const card = document.getElementById(`card-${idx}`);
+    if (card) card.classList.add('expanded');
+  }
+  inp.addEventListener('blur', commit);
+  inp.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter')  inp.blur();
+    if (ev.key === 'Escape') render();
+  });
+}
+
+/* ── Add / Update ── */
+document.getElementById('btnAdd').addEventListener('click', () => {
+  const data = readForm();
+  if (!data.code) {
+    showToast('Please enter a product code.', 'error');
+    document.getElementById('inCode').focus();
+    return;
+  }
+
+  const now = new Date().toISOString();
+  data.updatedAt = now;
+
+  const idx = items.findIndex(i => i.code === data.code);
+  if (idx >= 0) {
+    data.createdAt = items[idx].createdAt || now;
+    items[idx] = data;
+    showToast(`Updated ${data.code}`, 'success');
+  } else {
+    data.createdAt = now;
+    items.push(data);
+    showToast(`Added ${data.code}`, 'success');
+  }
+
+  save(); render(); clearInputs();
+  document.getElementById('inCode').focus();
+});
+
+/* ── Delete ── */
+function deleteItem(e) {
+  e.stopPropagation();
+  const idx  = parseInt(e.currentTarget.dataset.idx);
+  const code = items[idx].code;
+  expanded.delete(idx);
+  // Remap expanded indices after splice
+  const newExpanded = new Set();
+  expanded.forEach(i => { if (i < idx) newExpanded.add(i); else if (i > idx) newExpanded.add(i - 1); });
+  expanded = newExpanded;
+  items.splice(idx, 1);
+  save(); render();
+  showToast(`Removed ${code}`, 'info');
+}
+
+/* ── Clear All ── */
+document.getElementById('btnClear').addEventListener('click', () => {
+  if (!items.length) { showToast('Nothing to clear.', 'info'); return; }
+  if (confirm(`Delete all ${items.length} item(s)? This cannot be undone.`)) {
+    items = []; expanded.clear(); save(); render(); clearInputs();
+    showToast('All data cleared.', 'info');
+  }
+});
+
+/* ── Code input feedback ── */
+document.getElementById('inCode').addEventListener('input', function() {
+  this.className = 'code-input' + (this.value.trim() ? ' has-value' : '');
+});
+
+/* ── Enter key navigation ── */
+const formFields = ['inCode','inExpected','inFrontShelf','inOverflow','inCases','inCooler','inRegister','inEndcap'];
+formFields.forEach((id, i) => {
+  document.getElementById(id).addEventListener('keydown', ev => {
+    if (ev.key === 'Enter') {
+      ev.preventDefault();
+      const next = formFields[i + 1];
+      if (next) document.getElementById(next).focus();
+      else document.getElementById('btnAdd').click();
+    }
+  });
+});
+
+/* ── Refresh timestamps every minute ── */
+setInterval(() => { if (items.length) render(); }, 60000);
+
+/* ── Boot ── */
+loadTheme();
+load();
+render();
+</script>
+</body>
+</html>
